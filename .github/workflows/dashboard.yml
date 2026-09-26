@@ -19,7 +19,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install Pillow requests icalendar
+          pip install Pillow requests icalendar python-dateutil
           sudo apt-get update
           sudo apt-get install -y fonts-dejavu
 
@@ -77,6 +77,37 @@ jobs:
           for summary, rule in recurring[:20]:
               print("RRULE_EVENT:", summary)
               print("RRULE:", rule)
+
+          print("=== NEXT 7 DAYS FROM RECURRING EVENTS ===")
+          from dateutil.rrule import rrulestr
+          from datetime import datetime, timedelta, timezone
+
+          window_start = datetime(2026, 9, 27, tzinfo=timezone.utc)
+          window_end = window_start + timedelta(days=7)
+          recurring_hits = []
+
+          for component in cal.walk("VEVENT"):
+              summary = str(component.get("SUMMARY", "")).strip()
+              dtstart = component.get("DTSTART")
+              rrule = component.get("RRULE")
+              if not summary or not dtstart or not rrule:
+                  continue
+
+              start = dtstart.dt
+              if isinstance(start, datetime):
+                  if start.tzinfo is None:
+                      start = start.replace(tzinfo=timezone.utc)
+                  rule_text = rrule.to_ical().decode("utf-8")
+                  try:
+                      rule = rrulestr(rule_text, dtstart=start)
+                      for occurrence in rule.between(window_start, window_end, inc=True):
+                          recurring_hits.append((occurrence, summary))
+                  except Exception as e:
+                      print("RRULE_ERROR:", summary, type(e).__name__)
+
+          print("RECURRING_OCCURRENCES_NEXT_7_DAYS:", len(recurring_hits))
+          for occurrence, summary in sorted(recurring_hits)[:30]:
+              print("RECURRING_OCCURRENCE:", occurrence, "|", summary)
           PY
       
       - name: Commit PNG
