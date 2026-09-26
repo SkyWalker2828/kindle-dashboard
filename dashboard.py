@@ -65,6 +65,7 @@ BANNER_H       = H - BANNER_Y    # 150
 # ============================================================
 
 FONT_DIRS = [
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts"),
     "/System/Library/Fonts",
     "/System/Library/Fonts/Supplemental",
     "/Library/Fonts",
@@ -80,8 +81,8 @@ def find_font(candidates):
                 return p
     return None
 
-_SERIF = find_font(["NewYork.ttf", "Georgia.ttf", "DejaVuSerif.ttf"])
-_SANS  = find_font(["HelveticaNeue.ttc", "Helvetica.ttc", "DejaVuSans.ttf"])
+_SERIF = find_font(["Lora.ttf", "NewYork.ttf", "Georgia.ttf", "DejaVuSerif.ttf"])
+_SANS  = find_font(["Inter.ttc", "InterVariable.ttf", "HelveticaNeue.ttc", "Helvetica.ttc", "DejaVuSans.ttf"])
 _MONO  = find_font(["SFNSMono.ttf", "Menlo.ttc", "DejaVuSansMono.ttf"])
 
 # HelveticaNeue.ttc verified indices:
