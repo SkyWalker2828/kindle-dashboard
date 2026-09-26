@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Kindle Dashboard - 1448x1072 landscape, quiet editorial e-ink.
-Fixed vertical grid. No overlapping zones.
+Kindle Dashboard - portrait 1236x1648, e-ink editorial.
 """
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageEnhance
@@ -18,10 +17,11 @@ import datetime
 BASE = os.path.dirname(os.path.abspath(__file__))
 if not os.path.isdir(BASE) or not os.path.exists(os.path.join(BASE, "dashboard.py")):
     BASE = os.path.expanduser("~/KindleDashboard")
+
 CONFIG_PATH = os.path.join(BASE, "config.json")
 
 def load_config():
-    defaults = {"name": "", "city": "-", "country": "", "commute": None, "reminders": []}
+    defaults = {"name": "", "city": "-", "country": ""}
     try:
         with open(CONFIG_PATH) as f:
             cfg = json.load(f)
@@ -35,31 +35,14 @@ CFG = load_config()
 
 
 # ============================================================
-# CANVAS + VERTICAL GRID
-# ============================================================
-#
-#  y=0    greeting / date      |   header image (bleeds top-right)
-#  y=460  ─── rule ───
-#  y=490  UP NEXT              |   REMINDERS
-#  y=790  ─── rule ───
-#  y=820  city / next / temps
-#  y=922  ─── banner starts ───
-#  y=1072 bottom
-#
+# CANVAS - PORTRAIT
 # ============================================================
 
-W, H = 1448, 1072
+W, H = 1236, 1648
 img = Image.new("L", (W, H), 255)
 draw = ImageDraw.Draw(img)
 
-MARGIN = 64
-COL_SPLIT = 880                  # x where left/right columns split
-
-RULE_TOP_Y     = 460             # between header and middle
-RULE_MID_Y     = 790             # between middle and footer text
-FOOTER_TEXT_Y  = 820             # city name baseline top
-BANNER_Y       = 922             # footer banner top
-BANNER_H       = H - BANNER_Y    # 150
+MARGIN = 56
 
 
 # ============================================================
@@ -87,15 +70,9 @@ _SERIF = find_font(["Lora.ttf", "NewYork.ttf", "Georgia.ttf", "DejaVuSerif.ttf"]
 _SANS  = find_font(["Inter.ttc", "InterVariable.ttf", "HelveticaNeue.ttc", "Helvetica.ttc", "DejaVuSans.ttf"])
 _MONO  = find_font(["SFNSMono.ttf", "Menlo.ttc", "DejaVuSansMono.ttf"])
 
-# HelveticaNeue.ttc verified indices:
-#   0=Regular 1=Bold 2=Italic 3=BoldItalic 4=CondBold
-#   5=UltraLight 6=UltraLightItalic 7=Light 8=LightItalic
-#   9=CondBlack 10=Medium 11=MediumItalic 12=Thin 13=ThinItalic
-HN_THIN    = 12
 HN_LIGHT   = 7
 HN_REGULAR = 0
 HN_MEDIUM  = 10
-HN_BOLD    = 1
 
 def F(path, size, index=None):
     if path:
@@ -110,21 +87,65 @@ def F(path, size, index=None):
             pass
     return ImageFont.load_default()
 
-# ---- Display serif ----
-BIG_TEMP  = F(_SERIF, 190)    # the "26°"
-CONDITION = F(_SERIF, 62)     # "Clear"
-CITY_BIG  = F(_SERIF, 56)     # footer "Jinhua"
-TEMP_SIDE = F(_SERIF, 54)     # footer H/L
+CLOCK     = F(_SERIF, 88)
+GREETING  = F(_SANS, 30, HN_MEDIUM)
+DATE      = F(_SANS, 22, HN_LIGHT)
+BIG_TEMP  = F(_SERIF, 160)
+CONDITION = F(_SERIF, 54)
+STATUS    = F(_SANS, 24, HN_MEDIUM)
+SECTION   = F(_SERIF, 32)
+ROW_MAIN  = F(_SANS, 24, HN_REGULAR)
+CITY_BIG  = F(_SERIF, 44)
+TEMP_SIDE = F(_SERIF, 38)
+OUTLOOK_B = F(_SANS, 22, HN_MEDIUM)
+OUTLOOK_S = F(_SANS, 20, HN_LIGHT)
+OUTLOOK_T = F(_SERIF, 32)
+META      = F(_MONO, 13)
 
-# ---- UI text ----
-GREETING  = F(_SANS, 36, HN_MEDIUM)
-DATE      = F(_SANS, 26, HN_BOLD)
-SECTION   = F(_SERIF, 36)   # small letterspaced caps
-ROW_MAIN  = F(_SANS, 28, HN_REGULAR)   # event times
-ROW_SUB   = F(_SANS, 28, HN_LIGHT)    # event titles
-STATUS    = F(_SANS, 26, HN_MEDIUM)   # "Feels like... H... L..."
-REMIND    = F(_SANS, 26, HN_LIGHT)
-META      = F(_MONO, 14)
+
+# ============================================================
+# VERTICAL GRID (portrait 1648 tall)
+# ============================================================
+#
+#  y=0      header image (full width, 440 tall)
+#  y=440    -- image bottom --
+#  y=470    clock (big)
+#  y=590    greeting
+#  y=628    date
+#  y=690    big temp
+#  y=890    condition
+#  y=950    status line 1
+#  y=990    status line 2
+#  y=1050   -- rule 1 --
+#  y=1080   UP NEXT label
+#  y=1130   up next rows (3 x 54 = 162)
+#  y=1310   -- rule 2 --
+#  y=1340   OUTLOOK label
+#  y=1390   outlook cards (2 days)
+#  y=1470   -- rule 3 --
+#  y=1490   city / temps / next event
+#  y=1520   -- banner starts (128 tall) --
+#  y=1648   end
+#
+# ============================================================
+
+IMG_H       = 380
+CLOCK_Y     = 410
+GREETING_Y  = 520
+DATE_Y      = 556
+TEMP_Y      = 610
+COND_Y      = 800
+STATUS1_Y   = 856
+STATUS2_Y   = 890
+RULE_1      = 940
+UP_NEXT_Y   = 968
+ROW_H       = 54
+ROWS        = 3
+RULE_2      = UP_NEXT_Y + 50 + ROWS * ROW_H + 10   # 1302
+OUTLOOK_Y   = RULE_2 + 30                            # 1332
+CARD_Y      = OUTLOOK_Y + 50                         # 1382
+BANNER_H    = 190
+BANNER_Y    = H - BANNER_H
 
 
 # ============================================================
@@ -154,20 +175,11 @@ def fit_text(s, base_path, max_width, start_size, min_size=14, weight=None):
             hi = mid - 1
     return best
 
-def draw_checkbox(x, y, size=20, weight=2):
-    draw.rectangle((x, y, x + size, y + size), outline=0, width=weight)
-
-def letterspaced(s):
-    return s.upper()
-
-
 def section_label(x, y, s):
-    """Draw a section header in serif, faux-bold by double-stroking."""
     text = s.upper()
     txt(x, y, text, SECTION)
     txt(x + 1, y, text, SECTION)
     txt(x, y + 1, text, SECTION)
-
 
 
 def cover_crop(im, tw, th):
@@ -186,7 +198,6 @@ def cover_crop(im, tw, th):
 
 
 def process_photo(im):
-    """Clean, dramatic B&W for the header."""
     im = ImageOps.grayscale(im)
     im = ImageOps.autocontrast(im, cutoff=1)
     lut = [min(255, int(((i / 255.0) ** 1.05) * 255)) for i in range(256)]
@@ -197,7 +208,6 @@ def process_photo(im):
 
 
 def process_banner(im):
-    """High-contrast B&W banner."""
     im = ImageOps.grayscale(im)
     im = ImageOps.autocontrast(im, cutoff=1)
     lut = [min(255, int(((i / 255.0) ** 0.9) * 255)) for i in range(256)]
@@ -205,6 +215,55 @@ def process_banner(im):
     im = ImageEnhance.Contrast(im).enhance(1.25)
     im = ImageEnhance.Sharpness(im).enhance(1.3)
     return im
+
+
+def draw_weather_icon(x, y, code, size=44):
+    """Draw a simple line-art weather icon for the given code."""
+    cx, cy = x + size // 2, y + size // 2
+    r = size // 3
+
+    # Sun (always draw for clear/partly)
+    if code in (0, 1):
+        draw.ellipse((cx - r, cy - r, cx + r, cy + r), outline=0, width=3)
+        # rays
+        import math
+        for angle in range(0, 360, 45):
+            a = math.radians(angle)
+            x1 = cx + int(math.cos(a) * (r + 6))
+            y1 = cy + int(math.sin(a) * (r + 6))
+            x2 = cx + int(math.cos(a) * (r + 14))
+            y2 = cy + int(math.sin(a) * (r + 14))
+            draw.line((x1, y1, x2, y2), fill=0, width=2)
+
+    # Cloud
+    elif code in (2, 3, 45, 48):
+        draw.ellipse((cx - 20, cy - 6, cx + 4, cy + 18), outline=0, width=3)
+        draw.ellipse((cx - 6, cy - 16, cx + 22, cy + 12), outline=0, width=3)
+        draw.ellipse((cx + 10, cy - 6, cx + 30, cy + 18), outline=0, width=3)
+
+    # Rain
+    elif code in (51, 53, 55, 61, 63, 65, 80, 81, 82):
+        draw.ellipse((cx - 22, cy - 12, cx + 4, cy + 12), outline=0, width=3)
+        draw.ellipse((cx - 8, cy - 22, cx + 22, cy + 8), outline=0, width=3)
+        # rain drops
+        for dx in (-10, 2, 14):
+            draw.line((cx + dx, cy + 16, cx + dx - 3, cy + 26), fill=0, width=2)
+
+    # Snow
+    elif code in (71, 73, 75):
+        draw.ellipse((cx - 22, cy - 12, cx + 4, cy + 12), outline=0, width=3)
+        draw.ellipse((cx - 8, cy - 22, cx + 22, cy + 8), outline=0, width=3)
+        for dx in (-10, 2, 14):
+            draw.ellipse((cx + dx - 2, cy + 18, cx + dx + 2, cy + 22), outline=0, width=1)
+
+    # Thunder
+    elif code in (95, 96, 99):
+        draw.ellipse((cx - 22, cy - 12, cx + 4, cy + 12), outline=0, width=3)
+        draw.ellipse((cx - 8, cy - 22, cx + 22, cy + 8), outline=0, width=3)
+        # lightning bolt
+        draw.line((cx, cy + 10, cx - 4, cy + 22), fill=0, width=3)
+        draw.line((cx - 4, cy + 22, cx + 4, cy + 22), fill=0, width=3)
+        draw.line((cx + 4, cy + 22, cx, cy + 34), fill=0, width=3)
 
 
 # ============================================================
@@ -243,18 +302,30 @@ WEATHER_CODES = {
     95: "Thunderstorm", 96: "Thunderstorm", 99: "Thunderstorm",
 }
 
-weather = {"temp": "--", "humidity": "--", "condition": "Weather unavailable",
-           "low": "--", "high": "--", "ok": False}
+weather = {
+    "temp": "--", "humidity": "--", "condition": "Weather unavailable",
+    "low": "--", "high": "--", "ok": False, "days": [],
+}
 
 out = run(["python3", os.path.join(BASE, "weather.py")], timeout=15)
-if out and out != "ERROR" and out.count("|") >= 4:
-    try:
-        temp, hum, code, low, high = out.split("|")
-        weather = {"temp": temp, "humidity": hum,
-                   "condition": WEATHER_CODES.get(int(code), "Weather"),
-                   "low": low, "high": high, "ok": True}
-    except Exception:
-        pass
+if out and out != "ERROR":
+    parts = out.split("|")
+    if len(parts) >= 5:
+        try:
+            temp, hum, code, low, high = parts[0], parts[1], parts[2], parts[3], parts[4]
+            weather = {
+                "temp": temp, "humidity": hum,
+                "condition": WEATHER_CODES.get(int(code), "Weather"),
+                "low": low, "high": high, "ok": True, "days": [],
+            }
+            if len(parts) >= 6:
+                for d in parts[5].split(";"):
+                    hi, lo, c = d.split(",")
+                    weather["days"].append({
+                        "high": hi, "low": lo, "code": int(c),
+                    })
+        except Exception:
+            pass
 
 
 # ============================================================
@@ -270,13 +341,8 @@ if CFG.get("name"):
 
 
 # ============================================================
-# HEADER IMAGE  (top-right, bleeds to right edge, feather on left)
+# HEADER IMAGE - FULL WIDTH AT TOP
 # ============================================================
-
-SCENE_W = 640
-SCENE_H = 440
-SCENE_X = W - SCENE_W
-SCENE_Y = 0
 
 scene_path = None
 for name in ("main-landscape.png", "main-landscape.jpg"):
@@ -287,122 +353,114 @@ for name in ("main-landscape.png", "main-landscape.jpg"):
 
 if scene_path:
     scene = Image.open(scene_path).convert("L")
-    scene = cover_crop(scene, SCENE_W, SCENE_H)
+    scene = cover_crop(scene, W, IMG_H)
     scene = process_photo(scene)
-
-    # Feather left edge into white
-    FEATHER = 100
-    for x in range(FEATHER):
-        a = x / FEATHER
-        col = scene.crop((x, 0, x + 1, SCENE_H))
-        col = col.point(lambda p, a=a: int(p * a + 255 * (1 - a)))
-        scene.paste(col, (x, 0))
-
-    img.paste(scene, (SCENE_X, SCENE_Y))
+    img.paste(scene, (0, 0))
 
 
 # ============================================================
-# HEADER TEXT
+# CLOCK + GREETING + DATE
 # ============================================================
 
-txt(MARGIN, 56, greeting, GREETING)
-txt(MARGIN, 100, short_date, DATE)
-
-# Big temperature + condition
-txt(MARGIN, 130, f"{weather['temp']}°", BIG_TEMP)
-txt(MARGIN, 340, weather["condition"], CONDITION)
-
-# Status line — medium weight, clean
-status = f"Feels like {weather['temp']}°   ·   H {weather['high']}°   ·   L {weather['low']}°   ·   {weather['humidity']}% humidity"
-if not weather["ok"]:
-    status = "Live weather unavailable"
-txt(MARGIN, 420, status, STATUS)
+txt(MARGIN, CLOCK_Y, clock, CLOCK)
+txt(MARGIN, GREETING_Y, greeting, GREETING)
+txt(MARGIN, DATE_Y, short_date, DATE)
 
 
 # ============================================================
-# MIDDLE RULE
+# BIG TEMP + CONDITION + STATUS
 # ============================================================
 
-rule(RULE_TOP_Y)
+txt(MARGIN, TEMP_Y, f"{weather['temp']}°", BIG_TEMP)
+txt(MARGIN, COND_Y, weather["condition"], CONDITION)
+
+if weather["ok"]:
+    txt(MARGIN, STATUS1_Y, f"Feels like {weather['temp']}°", STATUS)
+    txt(MARGIN, STATUS2_Y,
+        f"H {weather['high']}°   L {weather['low']}°   {weather['humidity']}% humidity",
+        STATUS)
+else:
+    txt(MARGIN, STATUS1_Y, "Live weather unavailable", STATUS)
 
 
 # ============================================================
-# UP NEXT  (left column)
+# RULE 1
 # ============================================================
 
-UP_NEXT_X = MARGIN
-UP_NEXT_W = COL_SPLIT - MARGIN - 40
+rule(RULE_1)
 
-section_label(UP_NEXT_X, RULE_TOP_Y + 28, "up next")
+
+# ============================================================
+# UP NEXT
+# ============================================================
+
+section_label(MARGIN, UP_NEXT_Y, "up next")
 
 rows = []
 if today_events:
-    for t, title in today_events[:4]:
+    for t, title in today_events[:ROWS]:
         rows.append((t, title))
-if len(rows) < 4:
-    for day, time, title in upcoming[: 4 - len(rows)]:
+if len(rows) < ROWS:
+    for day, time, title in upcoming[: ROWS - len(rows)]:
         rows.append((f"{day} {time}", title))
 if not rows:
     rows = [("-", "Calendar unavailable")]
 
-row_y = RULE_TOP_Y + 90
-ROW_H = 68
-
-for t, title in rows[:4]:
-    txt(UP_NEXT_X, row_y, t, ROW_MAIN)
-    title_x = UP_NEXT_X + 220
-    title_max = UP_NEXT_W - 220
-    f = fit_text(title, _SANS, title_max, start_size=28, min_size=18, weight=HN_LIGHT)
+row_y = UP_NEXT_Y + 50
+for t, title in rows[:ROWS]:
+    txt(MARGIN, row_y, t, ROW_MAIN)
+    title_x = MARGIN + 220
+    title_max = W - MARGIN - title_x
+    f = fit_text(title, _SANS, title_max, start_size=24, min_size=15, weight=HN_LIGHT)
     txt(title_x, row_y, title, f)
     row_y += ROW_H
 
 
 # ============================================================
-# REMINDERS  (right column)
+# RULE 2
 # ============================================================
 
-REM_X = COL_SPLIT + 40
-REM_W = W - MARGIN - REM_X
+rule(RULE_2)
 
-section_label(REM_X, RULE_TOP_Y + 28, "reminders")
 
-rem_y = RULE_TOP_Y + 90
-reminders = CFG.get("reminders", [])
+# ============================================================
+# 3-DAY OUTLOOK
+# ============================================================
 
-if not reminders:
-    txt(REM_X, rem_y, "Add reminders in config.json", REMIND)
+section_label(MARGIN, OUTLOOK_Y, "outlook")
+
+days = weather.get("days", [])
+if len(days) >= 2:
+    col_w = (W - 2 * MARGIN) // 2
+    for i, day_data in enumerate(days[1:3]):   # skip today, show next 2
+        col_x = MARGIN + i * col_w
+
+        # Day label
+        day_name = (now + datetime.timedelta(days=i + 1)).strftime("%A")
+        txt(col_x, CARD_Y, day_name, OUTLOOK_B)
+
+        # Weather icon
+        draw_weather_icon(col_x, CARD_Y + 34, day_data["code"], size=52)
+
+        # Temps
+        temp_str = f"{day_data['high']}° / {day_data['low']}°"
+        txt(col_x + 70, CARD_Y + 48, temp_str, OUTLOOK_T)
+
+        # Condition name small
+        cond = WEATHER_CODES.get(day_data["code"], "")
+        txt(col_x + 70, CARD_Y + 88, cond, OUTLOOK_S)
 else:
-    for task in reminders[:4]:
-        draw_checkbox(REM_X, rem_y + 4, size=20)
-        f = fit_text(task, _SANS, REM_W - 40, start_size=26, min_size=17, weight=HN_LIGHT)
-        txt(REM_X + 38, rem_y, task, f)
-        rem_y += 56
+    txt(MARGIN, CARD_Y, "3-day forecast unavailable", STATUS)
 
 
 # ============================================================
-# FOOTER TEXT ZONE
+# RULE 3
 # ============================================================
 
-rule(RULE_MID_Y)
-
-# City name (serif, big)
-txt(MARGIN, FOOTER_TEXT_Y, CFG.get("city", "-"), CITY_BIG)
-
-# Next event line under the city
-next_event = upcoming[0] if upcoming else None
-if next_event:
-    day, time, title = next_event
-    txt(MARGIN, FOOTER_TEXT_Y + 70, f"Next: {day} {time} — {title}", STATUS)
-else:
-    txt(MARGIN, FOOTER_TEXT_Y + 70, "No upcoming events", STATUS)
-
-# H / L temps, right-aligned
-txt(W - MARGIN, FOOTER_TEXT_Y - 6, f"H {weather['high']}°", TEMP_SIDE, anchor="ra")
-txt(W - MARGIN, FOOTER_TEXT_Y + 60, f"L {weather['low']}°", TEMP_SIDE, anchor="ra")
 
 
 # ============================================================
-# FOOTER BANNER  (full width)
+# FOOTER BANNER - FULL WIDTH AT BOTTOM
 # ============================================================
 
 footer_path = None
@@ -418,26 +476,25 @@ if footer_path:
     foot = process_banner(foot)
     img.paste(foot, (0, BANNER_Y))
 
-
-# ============================================================
-# SYNC META  (top-right, under the scene image)
-# ============================================================
-
-txt(W - MARGIN, SCENE_H + 14, f"SYNCED {clock}", META, anchor="ra")
+    # City name overlay - black serif, faux-bold, on the banner
+    city = CFG.get("city", "")
+    if city:
+        city_font = F(_SERIF, 56)
+        cx, cy = MARGIN, BANNER_Y + 24
+        # Faux-bold via multi-stroke
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                draw.text((cx + dx, cy + dy), city, font=city_font, fill=0)
 
 
 # ============================================================
 # SAVE
 # ============================================================
 
-# Landscape version (Mac preview / original)
 out_path = os.path.join(BASE, "dashboard.png")
 img.save(out_path)
 print(f"Created {out_path}")
 
-# Portrait version for Kindle (rotate 90 CW + resize to 1236x1648)
-kindle = img.rotate(90, expand=True)
-kindle = kindle.resize((1236, 1648), Image.Resampling.LANCZOS)
 kindle_path = os.path.join(BASE, "dashboard-kindle.png")
-kindle.save(kindle_path)
+img.save(kindle_path)
 print(f"Created {kindle_path}")
