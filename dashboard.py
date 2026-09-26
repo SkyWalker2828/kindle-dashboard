@@ -15,7 +15,9 @@ import datetime
 # CONFIG
 # ============================================================
 
-BASE = os.path.expanduser("~/KindleDashboard")
+BASE = os.path.dirname(os.path.abspath(__file__))
+if not os.path.isdir(BASE) or not os.path.exists(os.path.join(BASE, "dashboard.py")):
+    BASE = os.path.expanduser("~/KindleDashboard")
 CONFIG_PATH = os.path.join(BASE, "config.json")
 
 def load_config():
