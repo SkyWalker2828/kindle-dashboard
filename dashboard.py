@@ -278,20 +278,70 @@ def run(cmd, timeout=12):
         return ""
 
 today_events = []
-out = run([os.path.join(BASE, "calendar_events")])
-if out and out != "NO_EVENTS":
-    for line in out.splitlines():
-        if "|" in line:
-            t, title = line.split("|", 1)
-            today_events.append((t.strip(), title.strip()))
-
 upcoming = []
-out = run([os.path.join(BASE, "calendar_upcoming")])
-if out and out != "NO_EVENTS":
-    for line in out.splitlines():
-        parts = line.split("|", 2)
-        if len(parts) == 3:
-            upcoming.append(tuple(p.strip() for p in parts))
+
+calendar_url = os.environ.get("CALENDAR_ICAL_URL", "").strip()
+
+if calendar_url:
+    try:
+        import urllib.request
+        from icalendar import Calendar
+
+        req = urllib.request.Request(
+            calendar_url,
+            headers={"User-Agent": "KindleDashboard/1.0"},
+        )
+
+        with urllib.request.urlopen(req, timeout=15) as response:
+            calendar_data = response.read()
+
+        cal = Calendar.from_ical(calendar_data)
+
+        from zoneinfo import ZoneInfo
+
+        china_tz = ZoneInfo("Asia/Shanghai")
+        today = datetime.datetime.now(china_tz).date()
+
+        events = []
+
+        for component in cal.walk("VEVENT"):
+            summary = str(component.get("SUMMARY", "")).strip()
+            if not summary:
+                continue
+
+            dtstart = component.get("DTSTART")
+            if not dtstart:
+                continue
+
+            start_value = dtstart.dt
+            all_day = isinstance(start_value, datetime.date) and not isinstance(
+                start_value, datetime.datetime
+            )
+
+            if all_day:
+                event_date = start_value
+                event_time = "All day"
+            else:
+                if start_value.tzinfo:
+                    start_value = start_value.astimezone(china_tz)
+
+                event_date = start_value.date()
+                event_time = start_value.strftime("%H:%M")
+
+            events.append((event_date, event_time, summary, all_day))
+
+        events.sort(key=lambda x: (x[0], x[1] if x[1] != "All day" else "00:00"))
+
+        for event_date, event_time, summary, all_day in events:
+            if event_date == today:
+                today_events.append((event_time, summary))
+            elif event_date > today:
+                day_name = event_date.strftime("%a")
+                upcoming.append((day_name, event_time, summary))
+
+    except Exception:
+        today_events = []
+        upcoming = []
 
 WEATHER_CODES = {
     0: "Clear", 1: "Mainly clear", 2: "Partly cloudy", 3: "Cloudy",

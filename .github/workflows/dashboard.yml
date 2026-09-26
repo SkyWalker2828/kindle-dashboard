@@ -19,11 +19,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install Pillow requests
+          pip install Pillow requests icalendar
           sudo apt-get update
           sudo apt-get install -y fonts-dejavu
 
       - name: Render dashboard
+        env:
+          CALENDAR_ICAL_URL: ${{ secrets.CALENDAR_ICAL_URL }}
         run: python dashboard.py
 
       - name: Commit PNG
