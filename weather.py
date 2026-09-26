@@ -12,7 +12,7 @@ params = {
 }
 
 try:
-    r = requests.get(url, params=params, timeout=10)
+    r = requests.get(url, params=params, timeout=10, headers={"User-Agent": "Mozilla/5.0 (KindleDashboard/1.0)"})
     r.raise_for_status()
     data = r.json()
 
