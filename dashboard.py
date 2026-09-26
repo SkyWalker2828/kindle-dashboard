@@ -430,6 +430,14 @@ txt(W - MARGIN, SCENE_H + 14, f"SYNCED {clock}", META, anchor="ra")
 # SAVE
 # ============================================================
 
+# Landscape version (Mac preview / original)
 out_path = os.path.join(BASE, "dashboard.png")
 img.save(out_path)
 print(f"Created {out_path}")
+
+# Portrait version for Kindle (rotate 90 CW + resize to 1236x1648)
+kindle = img.rotate(90, expand=True)
+kindle = kindle.resize((1236, 1648), Image.Resampling.LANCZOS)
+kindle_path = os.path.join(BASE, "dashboard-kindle.png")
+kindle.save(kindle_path)
+print(f"Created {kindle_path}")
