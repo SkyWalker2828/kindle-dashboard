@@ -66,6 +66,17 @@ jobs:
           print("EVENTS_ON_OR_AFTER_2026_09_27:", len(future))
           for event_date in future[:20]:
               print("FUTURE_EVENT_DATE:", event_date)
+
+          recurring = []
+          for component in cal.walk("VEVENT"):
+              summary = str(component.get("SUMMARY", "")).strip()
+              rrule = component.get("RRULE")
+              if summary and rrule:
+                  recurring.append((summary, rrule.to_ical().decode("utf-8")))
+          print("RECURRING_EVENTS:", len(recurring))
+          for summary, rule in recurring[:20]:
+              print("RRULE_EVENT:", summary)
+              print("RRULE:", rule)
           PY
       
       - name: Commit PNG
