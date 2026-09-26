@@ -339,7 +339,8 @@ if calendar_url:
                 day_name = event_date.strftime("%a")
                 upcoming.append((day_name, event_time, summary))
 
-    except Exception:
+    except Exception as e:
+        print("CALENDAR_ERROR:", type(e).__name__)
         today_events = []
         upcoming = []
 
