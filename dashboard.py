@@ -322,9 +322,9 @@ if calendar_url:
 
                 try:
                     rule_text = rrule.to_ical().decode("utf-8")
-                    rule = rrulestr(rule_text, dtstart=start_value)
+                    recurrence_rule = rrulestr(rule_text, dtstart=start_value)
 
-                    for occurrence in rule.between(now, window_end, inc=True):
+                    for occurrence in recurrence_rule.between(now, window_end, inc=True):
                         occurrence = occurrence.astimezone(china_tz)
                         events.append((
                             occurrence.date(),
