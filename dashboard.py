@@ -286,51 +286,84 @@ if calendar_url:
     try:
         import urllib.request
         from icalendar import Calendar
+        from dateutil.rrule import rrulestr
+        from zoneinfo import ZoneInfo
 
         req = urllib.request.Request(
             calendar_url,
             headers={"User-Agent": "KindleDashboard/1.0"},
         )
-
         with urllib.request.urlopen(req, timeout=15) as response:
             calendar_data = response.read()
 
         cal = Calendar.from_ical(calendar_data)
-
-        from zoneinfo import ZoneInfo
-
         china_tz = ZoneInfo("Asia/Shanghai")
-        today = datetime.datetime.now(china_tz).date()
+        now = datetime.datetime.now(china_tz)
+        today = now.date()
+        window_end = now + datetime.timedelta(days=7)
 
         events = []
 
         for component in cal.walk("VEVENT"):
             summary = str(component.get("SUMMARY", "")).strip()
-            if not summary:
-                continue
-
             dtstart = component.get("DTSTART")
-            if not dtstart:
+
+            if not summary or not dtstart:
                 continue
 
             start_value = dtstart.dt
-            all_day = isinstance(start_value, datetime.date) and not isinstance(
-                start_value, datetime.datetime
-            )
+            rrule = component.get("RRULE")
 
-            if all_day:
-                event_date = start_value
-                event_time = "All day"
-            else:
-                if start_value.tzinfo:
+            if rrule and isinstance(start_value, datetime.datetime):
+                if start_value.tzinfo is None:
+                    start_value = start_value.replace(tzinfo=china_tz)
+                else:
                     start_value = start_value.astimezone(china_tz)
 
-                event_date = start_value.date()
-                event_time = start_value.strftime("%H:%M")
+                try:
+                    rule_text = rrule.to_ical().decode("utf-8")
+                    rule = rrulestr(rule_text, dtstart=start_value)
 
-            events.append((event_date, event_time, summary, all_day))
+                    for occurrence in rule.between(now, window_end, inc=True):
+                        occurrence = occurrence.astimezone(china_tz)
+                        events.append((
+                            occurrence.date(),
+                            occurrence.strftime("%H:%M"),
+                            summary,
+                            False,
+                        ))
+                except Exception:
+                    pass
 
-        events.sort(key=lambda x: (x[0], x[1] if x[1] != "All day" else "00:00"))
+            else:
+                all_day = (
+                    isinstance(start_value, datetime.date)
+                    and not isinstance(start_value, datetime.datetime)
+                )
+
+                if all_day:
+                    event_date = start_value
+                    event_time = "All day"
+                else:
+                    if start_value.tzinfo:
+                        start_value = start_value.astimezone(china_tz)
+                    event_date = start_value.date()
+                    event_time = start_value.strftime("%H:%M")
+
+                if event_date >= today:
+                    events.append((
+                        event_date,
+                        event_time,
+                        summary,
+                        all_day,
+                    ))
+
+        events.sort(
+            key=lambda x: (
+                x[0],
+                x[1] if x[1] != "All day" else "00:00",
+            )
+        )
 
         for event_date, event_time, summary, all_day in events:
             if event_date == today:
@@ -338,9 +371,6 @@ if calendar_url:
             elif event_date > today:
                 day_name = event_date.strftime("%a")
                 upcoming.append((day_name, event_time, summary))
-        print("CALENDAR_TOTAL:", len(events))
-        print("CALENDAR_TODAY:", len(today_events))
-        print("CALENDAR_UPCOMING:", len(upcoming))
 
     except Exception as e:
         print("CALENDAR_ERROR:", type(e).__name__)
