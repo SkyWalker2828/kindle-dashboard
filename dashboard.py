@@ -338,6 +338,9 @@ if calendar_url:
             elif event_date > today:
                 day_name = event_date.strftime("%a")
                 upcoming.append((day_name, event_time, summary))
+        print("CALENDAR_TOTAL:", len(events))
+        print("CALENDAR_TODAY:", len(today_events))
+        print("CALENDAR_UPCOMING:", len(upcoming))
 
     except Exception as e:
         print("CALENDAR_ERROR:", type(e).__name__)
