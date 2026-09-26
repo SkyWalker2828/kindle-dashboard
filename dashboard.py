@@ -414,9 +414,10 @@ if out and out != "ERROR":
 
 # ============================================================
 # DATE / TIME
+from zoneinfo import ZoneInfo
 # ============================================================
 
-now = datetime.datetime.now()
+now = datetime.datetime.now(ZoneInfo("Asia/Shanghai"))
 clock      = now.strftime("%H:%M")
 short_date = now.strftime("%A, %B %-d, %Y")
 greeting = "Good morning" if now.hour < 12 else "Good afternoon" if now.hour < 18 else "Good evening"
