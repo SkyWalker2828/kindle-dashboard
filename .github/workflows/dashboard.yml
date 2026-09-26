@@ -55,8 +55,17 @@ jobs:
 
           print("CALENDAR_BYTES:", len(data))
           print("CALENDAR_EVENTS:", len(events))
-          for event_date in events[:10]:
-              print("EVENT_DATE:", event_date)
+          from datetime import date, datetime
+          today = date(2026, 9, 27)
+          future = []
+          for event_date in events:
+              d = event_date.date() if isinstance(event_date, datetime) else event_date
+              if d >= today:
+                  future.append(event_date)
+
+          print("EVENTS_ON_OR_AFTER_2026_09_27:", len(future))
+          for event_date in future[:20]:
+              print("FUTURE_EVENT_DATE:", event_date)
           PY
       
       - name: Commit PNG
