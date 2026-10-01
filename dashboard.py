@@ -109,6 +109,7 @@ OUTLOOK_TEMP = F(_SERIF, 36, "Regular")
 OUTLOOK_COND = F(_SANS, 23, None)
 CITY_BIG = F(_SERIF, 52, "SemiBold")
 UPDATED = F(_MONO, 16)
+CLOCK = F(_SERIF, 96, "SemiBold")
 
 INK = 15        # near-black, softer than pure 0 for a warmer e-ink look
 MUTE = 110      # secondary text
@@ -388,6 +389,7 @@ if out and out != "ERROR":
 # DATE / TIME
 # ============================================================
 now = datetime.datetime.now(ZoneInfo("Asia/Shanghai"))
+clock_str = now.strftime("%H:%M")
 short_date = now.strftime("%A, %-d %B")
 greeting = "Good morning" if now.hour < 12 else "Good afternoon" if now.hour < 18 else "Good evening"
 if CFG.get("name"):
@@ -418,18 +420,24 @@ if scene_path:
 # Text column, capped to the left of where the illustration starts
 TEXT_MAX_W = W - SCENE_W + 40  # a little overlap allowed since the edge is feathered
 
+# Small "synced" note top-right, since the big clock below is a
+# snapshot from render time, not a live tick — this keeps that honest
+# without taking up hero space.
+stamp_w = text_w(generated_stamp, UPDATED)
+txt(W - MARGIN - stamp_w, 44, generated_stamp, UPDATED, fill=170)
+
+txt(MARGIN, 40, clock_str, CLOCK)
+clock_bottom = 40 + 118
+
 if CFG.get("name"):
-    txt(MARGIN, 44, greeting, GREETING, fill=MUTE)
-    date_y = 76
+    txt(MARGIN, clock_bottom, greeting, GREETING, fill=MUTE)
+    date_y = clock_bottom + 34
 else:
-    date_y = 48
+    date_y = clock_bottom
 
 txt(MARGIN, date_y, short_date, DATE_HEAD)
 if CFG.get("city"):
     txt(MARGIN, date_y + 62, CFG["city"], CITY_LINE, fill=MUTE)
-
-stamp_w = text_w(generated_stamp, UPDATED)
-txt(W - MARGIN - stamp_w, date_y + 4, generated_stamp, UPDATED, fill=170)
 
 # Big temp inline with condition (baseline-aligned)
 temp_y = date_y + 128
