@@ -483,8 +483,14 @@ ROW_H_EVENTS = 108
 def draw_event_row(item, x, ry):
     t, title = item
     txt(x, ry, t, ROW_TIME)
-    f = fit_text(title, _SANS, col_w - 150, start_size=29, min_size=19)
-    txt(x + 138, ry, title, f)
+    # Position the title relative to the time'''s actual rendered width —
+    # "14:15" and "Fri 08:25" aren'''t the same length, so a fixed offset
+    # here was letting the longer upcoming-day format run into the title.
+    time_w = text_w(t, ROW_TIME)
+    title_x = x + time_w + 28
+    max_w = (x + col_w) - title_x - 16
+    f = fit_text(title, _SANS, max_w, start_size=29, min_size=19)
+    txt(title_x, ry, title, f)
 
 
 rows_used = two_columns(rows, MARGIN, y, col_w, ROW_H_EVENTS, draw_event_row, max_rows_per_col=2)
